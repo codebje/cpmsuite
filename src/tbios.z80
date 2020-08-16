@@ -1,0 +1,44 @@
+;; CPM BDOS system calls
+CPM_TERMCPM		equ	0		; system reset, equivalent to RST 0
+CPM_CREAD		equ	1		; console read; A=character
+CPM_CWRITE		equ	2		; console write; E=character
+CPM_AREAD		equ	3		; aux (reader) input; A=character
+CPM_AWRITE		equ	4		; aux (puncher) output; E=character
+CPM_LWRITE		equ	5		; list (printer) out; E=character
+CPM_RAWIO		equ	6		; raw I/O; E=mode, A=return (if any)
+CPM_GETIOB		equ	7		; get I/O byte; A=iobyte
+CPM_SETIOB		equ	8		; set I/O byte; E=iobyte
+CPM_WRITESTR		equ	9		; console write string; DE=string ($ terminated)
+CPM_READSTR		equ	10		; buffered console input; DE=buffer (bytes: size, n/a, data)
+CPM_CSTAT		equ	11		; console status; A=status
+CPM_BDOSVER		equ	12		; get BDOS version; A=system type, B=version
+CPM_DRV_ALLRESET	equ	13		; reset all disks
+CPM_DRV_SET		equ	14		; select disk; E=drive, A=0/FFh
+CPM_FOPEN		equ	15		; open file; DE=FCB, A=status
+CPM_FCLOSE		equ	16		; close file; DE=FCB, A=status
+CPM_SFIRST		equ	17		; search for first; DE=FCB, A=status
+CPM_SNEXT		equ	18		; search for next; DE=FCB, A=status
+CPM_FDELETE		equ	19		; delete file; DE=FCB, A=status
+CPM_FREAD		equ	20		; read file; DE=FCB, A=status
+CPM_FWRITE		equ	21		; write file; DE=FCB, A=status
+CPM_FMAKE		equ	22		; make file; DE=FCB, A=status
+CPM_FRENAME		equ	23		; rename file; DE=FCB, A=status
+CPM_DRV_LOGINVEC	equ	24		; drive vector; HL=bitmap
+CPM_DRV_GET		equ	25		; get current drive; A=drive
+CPM_DMAOFF		equ	26		; set DMA address
+CPM_DRV_ALLOCVEC	equ	27		; get alloc vector; HL=vector
+CPM_DRV_SETRO		equ	28		; set current drive read-only
+CPM_DRV_ROVEC		equ	29		; vector of R/O drives; HL=vector
+CPM_FATTRIB		equ	30		; set file attributes; DE=FCB, A=status
+CPM_DRV_DPB		equ	31		; get DPB address; HL=DPB
+CPM_USERNUM		equ	32		; get/set usernum; E=number (FFh to get), A=number
+CPM_FREADRAND		equ	33		; read random access; DE=FCB, A=status
+CPM_FWRITERAND		equ	34		; write random access; DE=FCB, A=status
+CPM_FSIZE		equ	35		; get file size; DE=FCB, A=status
+CPM_FRANDREC		equ	36		; update random access; DE=FCB
+CPM_DRV_RESET		equ	37		; reset disks; DE=vector, A=status
+CPM_FWRITEZF		equ	40		; write random with zero fill; DE=FCB, A=status
+
+;; extended BIOS functions, called with RST $38
+ERAWIN			equ	0		; raw ASCI0 input; A=character, ZF=status
+ERAWOUT			equ	1		; raw ASCI0 output; E=character
