@@ -39,6 +39,8 @@ CPM_FRANDREC		equ	36		; update random access; DE=FCB
 CPM_DRV_RESET		equ	37		; reset disks; DE=vector, A=status
 CPM_FWRITEZF		equ	40		; write random with zero fill; DE=FCB, A=status
 
+CPM_FCB			equ	$5c		; default FCB
+
 ;; extended BIOS functions, called with RST $38
 ERAWIN			equ	0		; raw ASCI0 input; A=character, ZF=status
 ERAWOUT			equ	1		; raw ASCI0 output; E=character
