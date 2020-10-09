@@ -4,7 +4,7 @@
 #target		bin
 #code		TEXT, $100
 
-#include	"z180registers.inc"
+#include	"src/z180registers.z80"
 
 DM1_ENABLE	equ	01100000b	; set bits DE0, /DWE1
 D_MEMF_MEMI_B	equ	00001010b	; DM1=00 SM1=10 MMOD=1
@@ -159,7 +159,7 @@ wait2:		in0	a, (STAT0)
 		out0	(TDR0), d
 		ret
 
-#include	"bin2hex.inc"
+#include	"src/bin2hex.z80"
 
 fill_byte:	.db	$e5
 

@@ -4,8 +4,8 @@
 #code		TEXT, $100
 #data		DATA, *
 
-#include	"z180registers.inc"
-#include	"tbios.z80"
+#include	"src/z180registers.z80"
+#include	"src/tbios.z80"
 
 #code		TEXT
 
@@ -368,7 +368,7 @@ dst		dw	0
 
 #endlocal
 
-#include	"bin2hex.inc"
+#include	"src/bin2hex.z80"
 
 #data		DATA
 		.org	TEXT_end

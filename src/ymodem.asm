@@ -12,8 +12,8 @@ YM_NAK		equ	$15			; receive error
 YM_CAN		equ	$18			; cancel transmission
 YM_CRC		equ	'C'			; request CRC-16 mode
 
-#include	"z180registers.inc"
-#include	"tbios.z80"
+#include	"src/z180registers.z80"
+#include	"src/tbios.z80"
 
 #code		TEXT
 
@@ -389,6 +389,7 @@ recv_body:	ld	(cmd), a
 
 		jr	z, body_retry
 
+		ld	de, 0
 		call	ym_crc		; CRC should be zero
 
 		pop	bc
@@ -486,95 +487,7 @@ loop:		call	recv_byte
 		ret
 #endlocal
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ym_crc
-;;
-;; Compute a Y-Modem CRC over the data at HL of size BC
-;;
-;; in:		hl	the data to checksum
-;;		bc	the size of the data
-;; out:		de	the checksum of the data
-#local
-ym_crc::	push	hl
-		push	bc
-		push	af
-
-		ld	de,0
-		ld	(crc),de
-
-bytloop:	ld	a, (crc+1)	; pos = (crc >> 8) ^ data[i]
-		xor	(hl)
-		ld	(pos), a
-
-		ld	a, (crc)	; crc = crc << 8
-		ld	(crc+1), a
-		xor	a
-		ld	(crc), a
-
-		push	hl
-		ld	hl, pos
-		xor	a
-		rrd			; a = pos & 0xf, pos = pos >> 4
-		sla	a
-		sla	(hl)
-		ld	d, (hl)
-
-		ld	h, hi(ym_crc_tab)
-		add	a, lo(ym_crc_tab)
-		ld	l, a
-
-		ld	a, (hl)		; crc = crc ^ ym_crc_tab[pos & 0xf]
-		inc	hl
-		ld	e, (hl)
-		ld	hl, crc
-		xor	a, (hl)
-		ld	(hl), a
-		inc	hl
-		ld	a, (hl)
-		xor	e
-		ld	(hl), a
-
-		ld	h, hi(ym_crc_tab+32)
-		ld	a, d
-		add	a, lo(ym_crc_tab+32)
-		ld	l, a
-
-		ld	a, (hl)		; crc = crc ^ ym_crc_tab[(pos >> 4) + 16]
-		inc	hl
-		ld	e, (hl)
-		ld	hl, crc
-		xor	a, (hl)
-		ld	(hl), a
-		inc	hl
-		ld	a, (hl)
-		xor	e
-		ld	(hl), a
-
-		pop	hl
-		inc	hl
-		dec	bc
-		ld	a,b
-		or	c
-		jr	nz, bytloop
-
-		ld	de,(crc)
-		pop	af
-		pop	bc
-		pop	hl
-		ret
-
-pos:		.db	0
-crc:		.dw	0
-
-; align this table such that adding $1e to either 16-word half will never overflow the low byte
-		if lo($) + $3e > $ff
-		.align	$40
-		endif
-ym_crc_tab:	.dw	$0000, $1021, $2042, $3063, $4084, $50a5, $60c6, $70e7
-		.dw	$8108, $9129, $a14a, $b16b, $c18c, $d1ad, $e1ce, $f1ef
-		.dw	$0000, $1231, $2462, $3653, $48c4, $5af5, $6ca6, $7e97
-		.dw	$9188, $83b9, $b5ea, $a7db, $d94c, $cb7d, $fd2e, $ef1f
-#endlocal
+#include	"src/ymcrc.z80"
 
 #data		DATA
 		.org	TEXT_end

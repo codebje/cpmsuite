@@ -3,7 +3,7 @@
 #target		bin
 #code		TEXT, $100
 
-#include	"z180registers.inc"
+#include	"src/z180registers.z80"
 
 		.org	$100
 
@@ -68,6 +68,6 @@ fail:		push	bc
 
 badmsg:		.text	'?????: memory test failed',13,10,'$'
 
-#include	"bin2hex.inc"
+#include	"src/bin2hex.z80"
 
 #end

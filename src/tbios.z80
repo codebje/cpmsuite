@@ -1,3 +1,6 @@
+;; CPM BDOS CALL target address
+BDOS			equ	5
+
 ;; CPM BDOS system calls
 CPM_TERMCPM		equ	0		; system reset, equivalent to RST 0
 CPM_CREAD		equ	1		; console read; A=character
