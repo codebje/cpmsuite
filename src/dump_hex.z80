@@ -1,0 +1,71 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; dump_hex - dump a region of memory in canonical hex output format
+;;
+;; in:		hl	the region of memory to dump
+;;		de	the starting address for display,
+;;		c	the number of rows of 16 bytes to dump
+#local
+dump_hex::
+		ld	(srcaddr), de
+
+		;; print a row of (up to) 16 bytes
+rowloop:	ld	a, (srcaddr)
+		call	bin_to_hex
+		ld	(linemsg+2), de
+		ld	a, (srcaddr+1)
+		call	bin_to_hex
+		ld	(linemsg), de
+
+		ld	de, (srcaddr)
+		inc	de
+		ld	(srcaddr), de
+
+		ld	b, 16
+		ld	ix, linemsg+8
+		ld	iy, linemsg+60
+
+writeloop:	ld	a, (hl)
+		inc	hl
+		ld	(iy+0), a
+
+		cp	' '			; control characters, replace with a dot
+		jr	c, dot
+		cp	'$'			; '$' would terminate the print...
+		jr	z, dot
+		cp	'~'			; high bit set, replace with a dot
+		jr	c, hex
+
+dot:		ld	(iy+0), '.'
+
+hex:		inc	iy
+		call	bin_to_hex
+		ld	(ix+0), e
+		ld	(ix+1), d
+		inc	ix
+		inc	ix
+		inc	ix
+
+		ld	a, 9
+		cp	b
+		jr	nz, loopy
+		inc	ix
+
+loopy:		djnz	writeloop
+
+		push	bc
+		push	hl
+		ld	de, linemsg
+		ld	c, 9
+		call	5
+		pop	hl
+		pop	bc
+
+		dec	c
+		jr	nz, rowloop
+		ret
+
+linemsg:	.text	'????0:  ?? ?? ?? ?? ?? ?? ?? ??  ?? ?? ?? ?? ?? ?? ?? ??    ????????????????', 13, 10, '$'
+srcaddr:	.dw	0
+
+#endlocal
+

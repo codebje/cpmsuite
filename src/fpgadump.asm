@@ -12,17 +12,15 @@
 		.org	$100
 
 		;; FPGA firmware revision
-		ld	bc, $0101
-		in	a, (c)
+		in0	a, (FPGA_VERSION)
 		call	bin_to_hex
 		ld	(versionbyte), de
 		ld	de, versionmsg
 		ld	c, CPM_WRITESTR
 		call	BDOS
 
-		ld	bc, $0100
-		in	a, (c)
-
+		;; SPI control register
+		in0	a, (SPI_CTRL)
 		call	bin_to_hex
 		ld	(statusbyte), de
 
@@ -30,94 +28,82 @@
 		ld	c, 9
 		call	5
 
-		ld	a, 0b00001001		; set one LED on and one auto-blinking
-		ld	bc, $0100
-		out	(c), a
-
 		;; read the manufacturer's ID
-		or	a, $10			; turn on the SPI master
-		out	(c), a
+		ld	a, SPI_CTRL_FLASH_READ
+		out0	(SPI_CTRL), a
 
-		ld	c, $04			; switch to SPI data port
 		ld	a, $AB			; command: wake from power-down
-		out	(c), a
+		out0	(SPI_DATA), a
 		xor	a
-		out	(c), a			; three dummy bytes
-		out	(c), a
-		out	(c), a
+		out0	(SPI_DATA), a		; four dummy bytes for command plus one read
+		out0	(SPI_DATA), a
+		out0	(SPI_DATA), a
+		out0	(SPI_DATA), a
 
-		in	a, (c)			; Manufacturer's ID
-		call	bin_to_hex
-		ld	(idbyte1), de
-
-		in	a, (c)			; Device ID
+		in0	a, (SPI_DATA)		; Device ID
 		call	bin_to_hex
 		ld	(idbyte2), de
 
-		ld	a, $0c			; restore usual blinky lights, turn off SPI
-		ld	bc, $100
-		out	(c), a
+		xor	a			; Turn off SPI
+		out0	(SPI_CTRL), a
 
-		ld	de, idmsg
+		ld	de, idmsg		; Print the IDs
 		ld	c, 9
 		call	5
 
-		ld	a, $1c
-		ld	bc, $100
-		out	(c), a
+		;; Wake from power-down only returns Device ID, so ask for Manufacturer ID too
+		ld	a, SPI_CTRL_FLASH_READ
+		out0	(SPI_CTRL), a
 
-		ld	a, $90
-		ld	c, $04
-		out	(c), a
+		ld	a, $90			; Read Manufacturer/Device ID
+		out0	(SPI_DATA), a
 		xor	a
-		out	(c), a
-		out	(c), a
-		out	(c), a
+		out0	(SPI_DATA), a		; Three address bytes, all zero
+		out0	(SPI_DATA), a
+		out0	(SPI_DATA), a
+		out0	(SPI_DATA), a		; One byte to begin reading
 
-		in	a, (c)
+		in0	a, (SPI_DATA)		; Manufacturer ID
 		call	bin_to_hex
 		ld	(idbyte1), de
 
-		in	a, (c)
+		in0	a, (SPI_DATA)		; Device ID
 		call	bin_to_hex
 		ld	(idbyte2), de
 
-		ld	a, $0c			; restore usual blinky lights, turn off SPI
-		ld	bc, $100
-		out	(c), a
+		xor	a			; Turn off SPI
+		out0	(SPI_CTRL), a
 
-		ld	de, idmsg
+		ld	de, idmsg		; Print the IDs
 		ld	c, 9
 		call	5
 
-		ld	a, $1c
-		ld	bc, $100
-		out	(c), a
+		;; Read the second FPGA bitstream
+		ld	a, SPI_CTRL_FLASH_READ
+		out0	(SPI_CTRL), a
 
-		ld	c, $04
-		ld	a, $0b
-		out	(c), a
+		ld	a, $0b			; SPI Flash fast read command
+		out0	(SPI_DATA), a		; Three address bytes, $008000
 		xor	a
-		out	(c), a
+		out0	(SPI_DATA), a
 		ld	a, $80
-		out	(c), a
+		out0	(SPI_DATA), a
 		xor	a
-		out	(c), a
-		out	(c), a
+		out0	(SPI_DATA), a
+		out0	(SPI_DATA), a		; One dummy byte for fast read
+		out0	(SPI_DATA), a		; One dummy byte to begin reading data
 
 		ld	hl, pagebuffer
-		ld	de, 32220
-readloop:	in	a, (c)
-		ld	(hl), a
-		inc	hl
-		dec	de
-		ld	a, d
-		or	e
+		ld	bc, SPI_DATA		; b = 0, c = input port
+		ld	d, 125			; 125x256 = 32000 bytes
+readloop:	inir				; 256x reads into hl from (bc), b decrements each time
+		dec	d
 		jr	nz, readloop
+		ld	b, 220			; read remaining 220 bytes
+		inir
 
-		ld	a, $0c			; restore usual blinky lights, turn off SPI
-		ld	bc, $100
-		out	(c), a
+		xor	a
+		out0	(SPI_CTRL), a
 
 		ld	de, $800
 		ld	hl, pagebuffer
@@ -171,21 +157,18 @@ readloop:	in	a, (c)
 
 		jp	0
 
-readreg:	ld	a, $1c
-		ld	bc, $100
-		out	(c), a
+readreg:	ld	a, SPI_CTRL_FLASH_READ
+		out0	(SPI_CTRL), a
+		out0	(SPI_DATA), d
 
-		ld	a, d
-		ld	c, $04
-		out	(c), a
+		in0	a, (SPI_DATA)
+		in0	a, (SPI_DATA)
 
-		in	a, (c)
 		call	bin_to_hex
 		ld	(spistatusbyte), de
 
-		ld	a, $0c			; restore usual blinky lights, turn off SPI
-		ld	bc, $100
-		out	(c), a
+		xor	a
+		out0	(SPI_CTRL), a
 
 		ret
 
@@ -206,78 +189,8 @@ spistatusbyte:	.text	'??', 13, 10, '$'
 imagecrcmsg:	.text	'Image CRC-16: '
 imagecrcbytes:	.text	'????', 13, 10, '$'
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; dump_hex - dump a region of memory in canonical hex output format
-;;
-;; in:		hl	the region of memory to dump
-;;		de	the starting address for display,
-;;		c	the number of rows of 16 bytes to dump
-#local
-dump_hex::
-		ld	(srcaddr), de
-
-		;; print a row of (up to) 16 bytes
-rowloop:	ld	a, (srcaddr)
-		call	bin_to_hex
-		ld	(linemsg+2), de
-		ld	a, (srcaddr+1)
-		call	bin_to_hex
-		ld	(linemsg), de
-
-		ld	de, (srcaddr)
-		inc	de
-		ld	(srcaddr), de
-
-		ld	b, 16
-		ld	ix, linemsg+8
-		ld	iy, linemsg+60
-
-writeloop:	ld	a, (hl)
-		inc	hl
-		ld	(iy+0), a
-
-		cp	' '			; control characters, replace with a dot
-		jr	c, dot
-		cp	'$'			; '$' would terminate the print...
-		jr	z, dot
-		cp	'~'			; high bit set, replace with a dot
-		jr	c, hex
-
-dot:		ld	(iy+0), '.'
-
-hex:		inc	iy
-		call	bin_to_hex
-		ld	(ix+0), e
-		ld	(ix+1), d
-		inc	ix
-		inc	ix
-		inc	ix
-
-		ld	a, 9
-		cp	b
-		jr	nz, loopy
-		inc	ix
-
-loopy:		djnz	writeloop
-
-		push	bc
-		push	hl
-		ld	de, linemsg
-		ld	c, 9
-		call	5
-		pop	hl
-		pop	bc
-
-		dec	c
-		jr	nz, rowloop
-		ret
-
-linemsg:	.text	'????0:  ?? ?? ?? ?? ?? ?? ?? ??  ?? ?? ?? ?? ?? ?? ?? ??    ????????????????', 13, 10, '$'
-srcaddr:	.dw	0
-
-#endlocal
-
 #include	"src/bin2hex.z80"
+#include	"src/dump_hex.z80"
 #include	"src/ymcrc.z80"
 
 #data		DATA

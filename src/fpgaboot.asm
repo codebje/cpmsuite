@@ -24,34 +24,37 @@ spaces:		ld	a, (hl)
 		cp	a, '4'+1
 		jr	nc, bad_args
 
-		;; get the 0-3 boot select value into bits 5 & 6
+		;; get the 0-3 boot select value into bits 4 & 5
 		sub	'1'
-		rrca
-		rrca
-		rrca
+		rlca
+		rlca
+		rlca
+		rlca
 
 		;; set the warm boot flag
-		or	$80
+		or	$40
 
-		ld	bc, $100
-		in	d, (c)
-		or	d
+		; read version
+		in0	d, (FPGA_VERSION)
 
-		push	af
+		; reboot
+		out0	(FPGA_CTRL), a
+
 		ld	a, d
 		call	bin_to_hex
-		ld	(statusbyte), de
-		ld	de, statusmsg
+		ld	(versionbyte), de
+		ld	de, versionmsg
 		ld	c, CPM_WRITESTR
 		call	BDOS
-		pop	af
 
-		ld	bc, $100
-		out	(c), a
+		ld	de, booted
+		ld	c, CPM_WRITESTR
+		call	BDOS
 
+		in0	a, (FPGA_VERSION)
 		call	bin_to_hex
-		ld	(statusbyte), de
-		ld	de, statusmsg
+		ld	(versionbyte), de
+		ld	de, versionmsg
 		jr	bail
 
 bad_args:	ld	de, usage
@@ -61,7 +64,9 @@ bail:		ld	c, CPM_WRITESTR
 
 usage:		.text	'usage: fpgaboot <1-4>', 13, 10, '$'
 
-statusmsg:	.text	'FPGA status byte: '
-statusbyte:	.text	'??', 13, 10, '$'
+booted:		.text	'FPGA rebooted.', 13, 10, '$'
+
+versionmsg:	.text	'FPGA version: '
+versionbyte:	.text	'??', 13, 10, '$'
 
 #include	"src/bin2hex.z80"

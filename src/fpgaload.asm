@@ -7,6 +7,8 @@
 #include	"src/z180registers.z80"
 #include	"src/tbios.z80"
 
+SPI_BEGIN	equ	SPI_CTRL_ENABLE | SPI_CTRL_FLASHROM | SPI_CTRL_50MHZ
+
 #code		TEXT
 
 		org	$100
@@ -22,22 +24,20 @@
 
 		; erase sector
 		call	write_enable
-		ld	bc, $100
-		ld	a, $1c
-		out	(c), a
-		ld	c, $04
-		ld	a, $52				; erase 32Kb block
-		out	(c), a
-		ld	ix, writeaddr
-		ld	a, (ix+0)
-		out	(c), a				; address 23-16
-		ld	a, (ix+1)
-		out	(c), a				; address 15-8
-		ld	a, (ix+2)
-		out	(c), a				; address 7-0
-		ld	c, $00
-		ld	a, $0c
-		out	(c), a
+
+		ld	a, SPI_BEGIN
+		out0	(SPI_CTRL), a
+
+		ld	hl, writecmd
+		ld	bc, $04 << 8 | SPI_DATA
+		otir
+
+		xor	a
+		out0	(SPI_CTRL), a
+
+		;; Update the write command to Page Program for the write loop
+		ld	a, $02
+		ld	(writecmd), a
 
 		call	wait_busy
 
@@ -82,54 +82,49 @@ badfile:	ld	de, badfilemsg
 		call	BDOS
 		rst	0
 
-write_enable:	ld	bc, $100			; begin SPI
-		ld	a, $1c
-		out	(c), a
+write_enable:	ld	a, SPI_BEGIN			; begin SPI
+		out0	(SPI_CTRL), a
 
-		ld	c, $04				; cmd 06: Write Enable
-		ld	a, $06
-		out	(c), a
+		ld	a, $06				; cmd 06: Write Enable
+		out0	(SPI_DATA), a
 
-		ld	c, $00				; end SPI
-		ld	a, $0c
-		out	(c), a
+		xor	a				; end SPI
+		out0	(SPI_CTRL), a
+
 		ret
 
-readreg:	ld	a, $1c
-		ld	bc, $100
-		out	(c), a
+readreg:	ld	a, SPI_BEGIN
+		out0	(SPI_CTRL), a
 
-		ld	a, d
-		ld	c, $04
-		out	(c), a
+		out0	(SPI_DATA), d
 
-		in	a, (c)
+		ld	a, $ff
+		out0	(SPI_DATA), a
+		in0	a, (SPI_DATA)
+
 		call	bin_to_hex
 		ld	(spistatusbyte), de
 
-		ld	d, $0c			; restore usual blinky lights, turn off SPI
-		ld	bc, $100
-		out	(c), d
+		xor	a
+		out0	(SPI_CTRL), a
 
 		ret
 
 
 ;; wait until busy bit is clear
-wait_busy:	ld	bc, $100
-		ld	a, $1c
-		out	(c), a
+wait_busy:	ld	a, SPI_BEGIN | SPI_CTRL_BULKREAD
+		out0	(SPI_CTRL), a
 
-		ld	c, $04
 		ld	a, $05
-		out	(c), a
+		out0	(SPI_DATA), a
+		in0	a, (SPI_DATA)
 
-wait_loop:	in	a, (c)
+wait_loop:	in0	a, (SPI_DATA)
 		tst	$01
 		jr	nz, wait_loop
 
-waited:		ld	c, $00
-		ld	a, $0c
-		out	(c), a
+		xor	a
+		out0	(SPI_CTRL), a
 
 		ret
 
@@ -177,33 +172,20 @@ nodata:		xor	a				; set zf
 #local
 write_page::	call	write_enable
 
-		ld	bc, $100
-		ld	a, $1c
-		out	(c), a
+		ld	a, SPI_BEGIN
+		out0	(SPI_CTRL), a
 
-		ld	c, $04
-		ld	a, $02
-		out	(c), a
-		ld	ix, writeaddr
-		ld	a, (ix+0)
-		out	(c), a
-		ld	a, (ix+1)
-		out	(c), a
-		ld	a, (ix+2)
-		out	(c), a
+		ld	hl, writecmd
+		ld	bc, $04 << 8 | SPI_DATA
+		otir
 
-		ld	d, 0
+		;; write 256 bytes of data
 		ld	hl, pagebuffer
+		ld	bc, SPI_DATA
+		otir
 
-write_loop:	ld	a, (hl)
-		out	(c), a
-		inc	hl
-		dec	d
-		jr	nz, write_loop
-
-		ld	c, $00
-		ld	a, $0c
-		out	(c), a
+		xor	a
+		out0	(SPI_CTRL), a
 
 		call	wait_busy
 
@@ -284,7 +266,8 @@ srcaddr:	.dw	0
 
 #include	"src/bin2hex.z80"
 
-writeaddr	.db	$00, $80, $00
+writecmd:	.db	$52			; initial command: erase 32kb sector
+writeaddr:	.db	$00, $80, $00
 
 badfilemsg:	.text	'File invalid, cannot open',13,10,'$'
 completemsg:	.text	'File successfully written',13,10,'$'
