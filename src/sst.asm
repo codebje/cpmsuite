@@ -84,7 +84,7 @@ close:		ld	de, CPM_FCB
 
 		or	a
 		ld	hl, (sector)
-		ld	de, $2000
+		ld	de, $0000
 		sbc	hl, de
 
 		ld	a, h
@@ -120,7 +120,7 @@ gotsome:	defm	'File was not empty',13,10,'$'
 donemsg:	defm	'Programming complete. '
 erasedmsg:	defm	'???? bytes erased and programmed.',13,10,'$'
 
-sector:		dw	$2000
+sector:		dw	$0000
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; load_bytes - read up to 4096 bytes into readbuf

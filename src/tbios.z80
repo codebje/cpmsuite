@@ -43,6 +43,7 @@ CPM_DRV_RESET		equ	37		; reset disks; DE=vector, A=status
 CPM_FWRITEZF		equ	40		; write random with zero fill; DE=FCB, A=status
 
 CPM_FCB			equ	$5c		; default FCB
+CPM_FCB_2		equ	$6c		; second "FCB"
 
 ;; extended BIOS functions, called with RST $38
 ERAWIN			equ	0		; raw ASCI0 input; A=character, ZF=status
@@ -50,9 +51,9 @@ ERAWOUT			equ	1		; raw ASCI0 output; E=character
 
 ;; TRS-20 I/O ports
 FPGA_CTRL		equ	$f0		; FPGA control (write)
-FPGA_VERSION		equ	$f0		; FPGA version (read)
 SPI_CTRL		equ	$f1		; SPI control
 SPI_DATA		equ	$f2		; SPI data
+FPGA_VERSION		equ	$f3		; FPGA version (read)
 
 SPI_CTRL_ENABLE		equ	$01		; Enable SPI: set bit 1
 SPI_CTRL_FLASHROM	equ	$00		; Flash ROM: clear bit 2
@@ -60,6 +61,7 @@ SPI_CTRL_SDCARD		equ	$02		; SD card: set bit 2
 SPI_CTRL_BULKREAD	equ	$08		; Bulk read mode
 SPI_CTRL_50MHZ		equ	$00		; 50MHz clock: clear clock bits
 SPI_CTRL_25MHZ		equ	$10		; 25MHz clock: 001
+SPI_CTRL_12MHZ		equ	$20		; 12MHz clock: 010
 SPI_CTRL_6MHZ		equ	$30		; 6.25MHz SPI clock: 011
 SPI_CTRL_400KHZ		equ	$70		; 390kHz SPI clock: 111
 SPI_CTRL_BUSY		equ	$80		; Busy flag (read-only)

@@ -13,8 +13,26 @@ SPI_BEGIN	equ	SPI_CTRL_ENABLE | SPI_CTRL_FLASHROM | SPI_CTRL_50MHZ
 
 		org	$100
 
-		ld	sp, $d000
+		; check the default FCB for a second argument
+		; ($6d) should contain '1'-'4' or ' '
+		ld	a, (CPM_FCB_2+1)
+		cp	a, ' '
+		jr	z, open				; if it's a space there's no 2nd argument
 
+		sub	a, '1'
+		jp	c, badargs
+		cp	a, 4
+		jp	nc, badargs
+
+		ld	h, a
+		ld	l, $80
+		mlt	hl
+		ld	a, h
+		ld	h, l
+		ld	l, a
+		ld	(writeaddr), hl
+
+open:
 		; open the default fcb
 		ld	de, CPM_FCB
 		ld	c, CPM_FOPEN
@@ -61,24 +79,25 @@ loadloop:	call	load_page			; read in 256 bytes
 
 		call	write_page			; write it to SPI
 
-		ld	a, (writeaddr+1)
-		inc	a
-		ld	(writeaddr+1), a
-		cp	$10
-		jr	nc, loadloop
+		ld	hl, writeaddr+1
+		inc	(hl)
+		ld	hl, loadcount
+		dec	(hl)
+		jr	nz, loadloop
 
 		ld	de, oversizemsg
-		ld	c, CPM_WRITESTR
-		call	BDOS
+		jr	exit
+
+loadcount:	.db	129
 
 written:	ld	de, completemsg
-		ld	c, CPM_WRITESTR
-		call	BDOS
+		jr	exit
 
-		rst	0
+badargs:	ld	de, badargsmsg
+		jr	exit
 
 badfile:	ld	de, badfilemsg
-		ld	c, CPM_WRITESTR
+exit:		ld	c, CPM_WRITESTR
 		call	BDOS
 		rst	0
 
@@ -270,6 +289,7 @@ writecmd:	.db	$52			; initial command: erase 32kb sector
 writeaddr:	.db	$00, $80, $00
 
 badfilemsg:	.text	'File invalid, cannot open',13,10,'$'
+badargsmsg:	.text	'Second argument should be an image number or nothing',13,10,'$'
 completemsg:	.text	'File successfully written',13,10,'$'
 oversizemsg:	.text	'File larger than 32K: truncated',13,10,'$'
 spistatusmsg:	.text	'SPI Flash status register '
@@ -279,6 +299,8 @@ timeout:	.text	'dnf',13,10,'$'
 erased:		.text	'Erase complete',13,10,'$'
 pageread:	.text	'Read a page from file',13,10,'$'
 pagewrote:	.text	'Wrote a page to flash',13,10,'$'
+targetaddrmsg:	.text	'Would erase 32kb sector at '
+targetaddr:	.text	'????00',13,10,'$'
 
 #data		DATA
 
